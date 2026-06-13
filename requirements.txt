@@ -2,7 +2,7 @@ fastapi
 uvicorn
 sqlalchemy
 aiosqlite
-google-generativeai
+google-genai
 aiohttp
 pydantic
 pydantic-settings

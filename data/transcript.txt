@@ -1,2 +1,59 @@
-[MEETING TRANSCRIPT - PLACEHOLDER]
-Replace this file with a real meeting transcript before running the pipeline.
+ORIGIN MEDICAL AI TEAM — SPRINT SYNC MEETING
+Date: June 13, 2026
+Attendees: Dr. Priya Anand (Chief Medical Officer), Rahul Sharma (ML Engineer),
+           Anika Patel (Data Scientist), Marcus Chen (Backend Engineer),
+           Dr. James Okonkwo (Clinical Advisor)
+
+[TRANSCRIPT BEGINS]
+
+Dr. Priya Anand: Good morning everyone. Let's go through open action items first, then move into today's agenda.
+
+Rahul Sharma: Before we start — I want to flag that our model validation pipeline has been failing intermittently. I've been investigating and it looks like a memory issue in the batch processor.
+
+Dr. Priya Anand: That's critical. Rahul, can you own the root cause analysis and have it ready by end of week? We cannot have model validation failing before the FDA submission.
+
+Rahul Sharma: Absolutely. I'll have the RCA done by Friday and push the fix to staging by Monday.
+
+Dr. James Okonkwo: On the clinical side, we received feedback from St. Mary's hospital pilot. They're requesting a more detailed audit trail on diagnostic recommendations — specifically confidence intervals and supporting evidence for each recommendation.
+
+Dr. Priya Anand: Anika, can you work with Dr. Okonkwo to extend the recommendation output schema to include those fields? This is high priority — it's a paying client requirement.
+
+Anika Patel: Yes, I'll coordinate with Dr. Okonkwo and have a schema draft ready by next Tuesday.
+
+Marcus Chen: I have a scalability concern. Our current SQLite setup won't handle more than 50 concurrent users. Someone should look into migrating to PostgreSQL before we go to production. It could be a significant effort.
+
+Dr. Priya Anand: Marcus, can you own that? Prepare a migration proposal with effort estimates.
+
+Marcus Chen: Happy to. I'll have the document ready by end of next week.
+
+Anika Patel: We also need to update the model training data. The current dataset is from Q1 and we have approximately 2,000 new approved patient records since then. The team should probably re-run the training pipeline with the updated data.
+
+Dr. Priya Anand: Who will own the re-training?
+
+Anika Patel: I can kick it off but I'll need Rahul's help to validate the outputs.
+
+Dr. Priya Anand: Rahul, please plan to support Anika on model re-training validation — let's target next sprint.
+
+Rahul Sharma: Confirmed, I'll block time for it.
+
+Dr. James Okonkwo: One more critical item — we need the clinical validation report for the IRB submission. The deadline is June 30th. Somebody should start drafting that immediately.
+
+Dr. Priya Anand: Dr. Okonkwo, since you are our clinical advisor, can you take the lead on the IRB report?
+
+Dr. James Okonkwo: I will start drafting today and share a first draft with the team by June 20th.
+
+Dr. Priya Anand: Perfect. Marcus — the API latency on our inference endpoint has been above our 200ms SLA target for three consecutive days. Can you investigate and push a fix?
+
+Marcus Chen: I'll look into it today and have a fix to staging by tomorrow morning.
+
+Dr. Priya Anand: Great. Also — someone needs to update the project README with the new deployment instructions before the next external review. Low priority but it needs to happen.
+
+Rahul Sharma: I can handle the README update by end of the week.
+
+Dr. Priya Anand: Perfect. One final thing — we should schedule a security audit for the patient data access layer before the Q3 release. The team needs to coordinate with the compliance office on this.
+
+Marcus Chen: I can initiate that by reaching out to compliance next week.
+
+Dr. Priya Anand: Good. Alright, that covers everything. Next sync is Thursday.
+
+[TRANSCRIPT ENDS]
