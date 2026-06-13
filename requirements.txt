@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+sqlalchemy
+aiosqlite
+google-generativeai
+aiohttp
+pydantic
+pydantic-settings
+python-dotenv
+tenacity
+pytest
+pytest-asyncio
+httpx
