@@ -5,7 +5,6 @@ An AI-powered workflow automation service that ingests medical meeting transcrip
 ## Quick Start
 
 ```bash
-cp .env.example .env
 # Fill in your API keys in .env
 docker-compose up --build
 ```
@@ -20,7 +19,3 @@ curl -X POST http://localhost:8000/process-meeting \
   -H "Content-Type: application/json" \
   -d '{"transcript_path": "data/transcript.txt"}'
 ```
-
-## Architecture
-
-See [implementation.md](implementation.md) for the full phase-by-phase implementation plan.
