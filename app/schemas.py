@@ -6,6 +6,7 @@ These schemas serve two purposes:
   1. Passed as `response_schema` to Gemini to enforce structured JSON output
   2. Validate and parse every Gemini response before it enters the pipeline
 """
+from typing import Literal
 from pydantic import BaseModel, Field
 
 
@@ -23,7 +24,7 @@ class ActionItem(BaseModel):
     title: str
     description: str
     assignee: str | None = None
-    priority: str
+    priority: Literal["HIGH", "MEDIUM", "LOW"]
     confidence: float = Field(ge=0.0, le=1.0)
 
 
@@ -35,5 +36,5 @@ class MeetingExtraction(BaseModel):
         meeting_summary — A concise paragraph summarising the meeting's key decisions
         action_items    — All action items extracted from the transcript
     """
-    meeting_summary: str
+    meeting_summary: str = Field(min_length=1)
     action_items: list[ActionItem]

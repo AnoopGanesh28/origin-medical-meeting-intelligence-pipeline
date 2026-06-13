@@ -39,13 +39,14 @@ def requires_review(item: ActionItem) -> bool:
     if item.confidence < settings.CONFIDENCE_THRESHOLD:
         return True
 
-    # Rule 2: No assignee — nobody is clearly responsible
-    if item.assignee is None:
+    # Rule 2: No assignee or empty assignee — nobody is clearly responsible
+    if not item.assignee or not item.assignee.strip():
         return True
 
-    # Rule 3: Ambiguous ownership language in the title (word-level match, case-insensitive)
+    # Rule 3: Ambiguous ownership language in the title or assignee (word-level match, case-insensitive)
     title_words = set(item.title.lower().split())
-    if title_words & _AMBIGUOUS_OWNERSHIP_WORDS:
+    assignee_words = set(item.assignee.lower().split()) if item.assignee else set()
+    if (title_words | assignee_words) & _AMBIGUOUS_OWNERSHIP_WORDS:
         return True
 
     return False

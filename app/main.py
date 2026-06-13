@@ -8,20 +8,31 @@ endpoint for handling Slack button clicks (Approve / Reject).
 import hashlib
 import hmac
 import json
+import logging
 import time
 import urllib.parse
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import get_db, init_db
+from app.extraction_agent import extract_action_items
+from app.ingestion import load_transcript
 from app.jira_client import create_ticket
-from app.models import PendingReview, ReviewStatus
+from app.logging_config import setup_logging
+from app.models import PendingReview, ProcessedMeeting, ReviewStatus
+from app.review_engine import requires_review
 from app.schemas import ActionItem
-from app.slack_client import update_message
+from app.slack_client import post_review_request, post_summary, update_message
+from app.utils import compute_transcript_hash
+
+# Initialize logging globally
+setup_logging()
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -60,6 +71,100 @@ app = FastAPI(
 async def health_check():
     """Liveness probe — returns OK if the server is running."""
     return {"status": "ok", "version": "0.1.0"}
+
+
+# ---------------------------------------------------------------------------
+# Core Pipeline — Phase 12
+# ---------------------------------------------------------------------------
+
+class ProcessMeetingRequest(BaseModel):
+    transcript_path: str
+
+
+@app.post("/process-meeting", tags=["Pipeline"])
+async def process_meeting(
+    request_data: ProcessMeetingRequest,
+    x_api_key: str = Header(..., alias="X-API-Key"),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Main orchestration workflow.
+    Loads transcript, extracts tasks, filters ambiguity, creates Jira tickets,
+    and asks for human approval in Slack for ambiguous tasks.
+    """
+    if x_api_key != settings.PIPELINE_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API Key")
+
+    logger.info("Processing meeting transcript from %s", request_data.transcript_path)
+
+    # 1. Load transcript
+    transcript = load_transcript(request_data.transcript_path)
+
+    # 2. Hash transcript
+    transcript_hash = compute_transcript_hash(transcript)
+
+    # 3. Check idempotent DB record
+    result = await db.execute(
+        select(ProcessedMeeting).where(ProcessedMeeting.transcript_hash == transcript_hash)
+    )
+    existing = result.scalar_one_or_none()
+    if existing:
+        logger.info("Duplicate transcript %s. Returning cached summary.", transcript_hash)
+        return {
+            "summary": existing.summary,
+            "tickets_created": 0,
+            "pending_review": 0,
+            "status": "already_processed"
+        }
+
+    # 4. Extract action items
+    extraction = await extract_action_items(transcript)
+
+    # 5. Split items into auto vs review
+    tickets_created = []
+    pending_titles = []
+
+    for item in extraction.action_items:
+        if requires_review(item):
+            # 7. Create PendingReview record
+            pending = PendingReview(
+                title=item.title,
+                description=item.description,
+                assignee=item.assignee,
+                confidence=item.confidence,
+                status=ReviewStatus.PENDING
+            )
+            db.add(pending)
+            await db.flush()  # We need pending.id for the slack button
+            
+            # 8. Post Slack review request
+            ts = await post_review_request(item, pending.id)
+            pending.slack_message_ts = ts
+            pending_titles.append(item.title)
+        else:
+            # 6. Auto-create Jira ticket
+            ticket_key = await create_ticket(item)
+            tickets_created.append(ticket_key)
+
+    # 9. Generate Slack summary
+    await post_summary(extraction, tickets_created, pending_titles)
+
+    # 10. Store ProcessedMeeting
+    processed = ProcessedMeeting(
+        transcript_hash=transcript_hash,
+        summary=extraction.meeting_summary
+    )
+    db.add(processed)
+    
+    await db.commit()
+
+    logger.info("Meeting processed successfully.")
+    return {
+        "summary": extraction.meeting_summary,
+        "tickets_created": len(tickets_created),
+        "pending_review": len(pending_titles),
+        "status": "processed"
+    }
 
 
 # ---------------------------------------------------------------------------

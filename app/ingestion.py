@@ -5,6 +5,9 @@ Provides load_transcript() to safely read a meeting transcript from disk.
 Raises descriptive custom exceptions so the caller always knows exactly what went wrong.
 """
 from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class TranscriptNotFoundError(FileNotFoundError):
@@ -51,4 +54,5 @@ def load_transcript(path: str) -> str:
             f"Transcript file is empty or contains only whitespace: '{path}'."
         )
 
+    logger.info("Successfully loaded transcript from '%s' (%d chars)", path, len(content))
     return content
