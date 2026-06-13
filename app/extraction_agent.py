@@ -13,7 +13,7 @@ from google.genai import errors as genai_errors
 from google.genai import types
 from tenacity import (
     retry,
-    retry_if_exception_type,
+    retry_if_exception,
     stop_after_attempt,
     wait_exponential,
 )
@@ -43,11 +43,19 @@ TRANSCRIPT:
 {transcript}
 """
 
-# Only retry on transient server-side errors — not on config/auth/parse errors
-_RETRYABLE_EXCEPTIONS = (
-    genai_errors.ServerError,   # 5xx — transient server failures
-    genai_errors.APIError,      # generic transient API errors
-)
+def _is_retryable(exc: BaseException) -> bool:
+    """
+    Retry predicate for tenacity.
+    Only retries on:
+      - ServerError (5xx) — transient server failures
+      - ClientError with code 429 — rate limit (back off and retry)
+    Does NOT retry on 401 (bad API key), 400 (bad request), or other 4xx.
+    """
+    if isinstance(exc, genai_errors.ServerError):
+        return True
+    if isinstance(exc, genai_errors.ClientError) and getattr(exc, "code", None) == 429:
+        return True
+    return False
 
 
 def _get_client() -> genai.Client:
@@ -58,7 +66,7 @@ def _get_client() -> genai.Client:
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type(_RETRYABLE_EXCEPTIONS),
+    retry=retry_if_exception(_is_retryable),
     reraise=True,
 )
 async def _call_gemini(client: genai.Client, prompt: str) -> str:

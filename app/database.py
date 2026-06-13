@@ -4,6 +4,8 @@ Phase 3: Database Layer
 Configures the async SQLAlchemy engine, session factory, and declarative base.
 Call `await init_db()` once at application startup to create all tables.
 """
+from typing import AsyncGenerator
+
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -42,3 +44,12 @@ async def init_db() -> None:
         # Import models here to ensure they are registered on Base before create_all
         from app import models  # noqa: F401
         await conn.run_sync(Base.metadata.create_all)
+
+
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """
+    FastAPI dependency that provides an async database session per request.
+    The session is automatically closed when the request completes.
+    """
+    async with AsyncSessionLocal() as session:
+        yield session
