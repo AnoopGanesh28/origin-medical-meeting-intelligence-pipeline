@@ -6,12 +6,11 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application source
+# Copy the application code
 COPY . .
 
-# Create runtime directories
-RUN mkdir -p data logs
-
+# Expose FastAPI port
 EXPOSE 8000
 
+# Start FastAPI server
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

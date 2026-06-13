@@ -1,13 +1,15 @@
-version: "3.9"
+version: "3.8"
 
 services:
   pipeline:
     build: .
+    container_name: origin_medical_pipeline
     ports:
       - "8000:8000"
     env_file:
       - .env
     volumes:
+      # Persist SQLite database and logs
       - ./data:/app/data
       - ./logs:/app/logs
     restart: unless-stopped
