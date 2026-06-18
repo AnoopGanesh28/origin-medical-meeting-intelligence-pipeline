@@ -14,6 +14,7 @@ import urllib.parse
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -62,6 +63,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # ---------------------------------------------------------------------------
 # Health
@@ -78,7 +87,7 @@ async def health_check():
 # ---------------------------------------------------------------------------
 
 class ProcessMeetingRequest(BaseModel):
-    transcript_path: str
+    transcript_text: str
 
 
 @app.post("/process-meeting", tags=["Pipeline"])
@@ -95,10 +104,12 @@ async def process_meeting(
     if x_api_key != settings.PIPELINE_API_KEY:
         raise HTTPException(status_code=401, detail="Invalid API Key")
 
-    logger.info("Processing meeting transcript from %s", request_data.transcript_path)
+    logger.info("Processing meeting transcript directly from text payload (%d chars)", len(request_data.transcript_text))
 
-    # 1. Load transcript
-    transcript = load_transcript(request_data.transcript_path)
+    # 1. Get transcript
+    transcript = request_data.transcript_text
+    if not transcript or not transcript.strip():
+        raise HTTPException(status_code=400, detail="Transcript text cannot be empty.")
 
     # 2. Hash transcript
     transcript_hash = compute_transcript_hash(transcript)

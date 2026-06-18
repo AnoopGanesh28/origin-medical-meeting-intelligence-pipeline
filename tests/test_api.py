@@ -6,11 +6,11 @@ from app.main import app
 async def test_api_missing_key():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         # Missing X-API-Key header
-        resp = await client.post("/process-meeting", json={"transcript_path": "transcript.txt"})
+        resp = await client.post("/process-meeting", json={"transcript_text": "Alice: Bob will fix the bugs."})
         assert resp.status_code == 422 # FastAPI validation error for missing required header
         
         # Invalid X-API-Key header
-        resp2 = await client.post("/process-meeting", json={"transcript_path": "transcript.txt"}, headers={"X-API-Key": "invalid_key"})
+        resp2 = await client.post("/process-meeting", json={"transcript_text": "Alice: Bob will fix the bugs."}, headers={"X-API-Key": "invalid_key"})
         assert resp2.status_code == 401
 
 @pytest.mark.asyncio
